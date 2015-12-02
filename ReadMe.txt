@@ -114,6 +114,7 @@ Notes on application:
 	It is licensed under the MIT licence.
 
 Notes on using a console application within a windows environment for beginners:
+	-Save the .exe (binary) file - select the 32 bit or 64 bit, and then rename the file CusumARL.exe
 	-Note the folder the .exe file is saved in. It is easiest to copy the path from the 'address bar'.
 	-Open the Command Prompt. Start Prompt -> All programs -> accessories
 	-type (without square brackets):
