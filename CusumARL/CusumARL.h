@@ -7,8 +7,11 @@ namespace CusumARL
 
 	struct ARL_params
 	{
+		ARL_params() : Runs(0), LastThreshold(0), MinRun(LONG_MAX), MaxRun(0), Seconds(0) {}
 		long Runs;
 		long LastThreshold;
+		long MinRun;
+		long MaxRun;
 		double Seconds;
 	};
 	enum ProbabilityRatioFormula { LogLikelihoodRatio };
@@ -26,7 +29,7 @@ namespace CusumARL
 	* @param headstart - for FIR CUSUMS - leave default of 0 to reset back to 0 (standard CUSUM)
 	*/
 	ARL_params MonteCarlo(double h, double p, W w, long iterations, double headstart);
-	inline W Deflections(double h, double p0, double &p1, double oddsRatio, ProbabilityRatioFormula formula);
+	inline W Deflections(double h, double &p0, double &p1, double oddsRatio, ProbabilityRatioFormula formula);
 
 }
 #endif

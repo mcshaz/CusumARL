@@ -59,6 +59,8 @@ Examples:
 		----------------------------------------
 		threshold exceeded: 224 times
 		last exceeded at iteration number: 9946
+		minimum run length: 6
+		maximum run length: 148
 		~failures to signal (arl*p1): 8.07305
 
 		ARL:44.4018
@@ -89,6 +91,8 @@ Examples:
 		...
 		threshold exceeded: 416819 times
 		last exceeded at iteration number: 99999383
+		minimum run length: 4
+		maximum run length: 2774
 		~failures to signal (arl*p1): 23.9911
 
 		ARL:239.911
@@ -121,4 +125,4 @@ Notes on using a console application within a windows environment for beginners:
 		cd [folder path containing the .exe file]
 	 *note that to paste the path after cd, you will have to use right mouse rather than Ctrl + v
 	-type commands as per the examples above
-	-To copy the output from the console window to your clipboard, right click the mouse, choose Mark from the menu, select the required text with your mouse and then hit the enter key.
+	-To copy the output from the console window to your clipboard, right click the mouse, choose 'Mark' from the menu, select the required text with your mouse and then either hit the enter key, or click on the title bar of the console window (not within the window) and select 'Copy'.

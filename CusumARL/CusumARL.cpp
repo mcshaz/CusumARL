@@ -38,7 +38,7 @@ int main(int argc,      // Number of strings in array argv
 	double h, p0, p1, headstart, odds;
 	unsigned long it;
 	unsigned int seed;
-
+	int full;
 
 	try {
 
@@ -49,24 +49,29 @@ int main(int argc,      // Number of strings in array argv
 		RangeConstraint<double> gt0 = RangeConstraint<double>::GT(0.0);
 		RangeConstraint<double> headstartConstraint = RangeConstraint<double>(0.0, 1.0, RangeBounds::includeMin);
 
-		TCLAP::ValueArg<double> p0Arg("p", "p0", "Predicted probability", true, 0.0, &probConstraint);
+		TCLAP::ValueArg<double> p0Arg("p", "p0", "Predicted probability", false, 0.0, &probConstraint);
 		TCLAP::ValueArg<double> hArg("t", "threshold", "Decision threshold (h)", true, 0.0, &gt0);
+		TCLAP::ValueArg<double> p1Arg("g", "gen", "Randomly generated probability", false, 0.0, &probConstraint);
 
 		TCLAP::ValueArg<unsigned long> itArg("i", "iterations", "No. of times to create a random observation", false, 10000, "N");
 		TCLAP::ValueArg<unsigned int> seedArg("s", "seed", "Random number seed", false, 0, "N");
-		TCLAP::ValueArg<double> p1Arg("g", "gen", "Randomly generated probability", false, 0.0, &probConstraint);
 		TCLAP::ValueArg<double> orArg("o", "or", "Odds Ratio to calculate SPRT", false, 2.0, &gt0);
 		TCLAP::ValueArg<double> headstartArg("r", "reset", "Head start (as fraction of decision threshold) to reset to (FIR CUSUM)", false, 0.0, &headstartConstraint);
+
+		TCLAP::SwitchArg fullArg("f","f", "calculate ARL0 and ARL1");
 		
 		// Add the argument nameArg to the CmdLine object. The CmdLine object
 		// uses this Arg to parse the command line.
-		cmd.add(p0Arg); 
+		cmd.add(p0Arg);
+		cmd.add(p1Arg);
+
 		cmd.add(hArg); 
 		cmd.add(itArg);
 		cmd.add(seedArg); 
-		cmd.add(p1Arg); 
 		cmd.add(orArg); 
 		cmd.add(headstartArg);
+
+		cmd.add(fullArg);
 
 		// Parse the argv array.
 		cmd.parse(argc, argv);
@@ -78,9 +83,19 @@ int main(int argc,      // Number of strings in array argv
 		headstart = headstartArg.getValue();
 		odds = orArg.getValue();
 		it=itArg.getValue();
+		full = fullArg.getValue();
+
 		seed = seedArg.getValue();
 		if (seed == 0) { seed = (unsigned int)time(NULL); }
 		srand(seed);
+
+		if (p0 == 0.0 && p1 == 0.0) { //should add orAdd to tclap
+			TCLAP::CmdLineOutput * o = cmd.getOutput();
+			std::cerr << "PARSE ERROR\n\tRequired argument missing: either " << p0Arg.getName() << " or " << p1Arg.getName();
+			o->usage(cmd);
+			exit(0);
+		}
+
 	}
 	catch (TCLAP::ArgException &e)  // catch any exceptions
 	{
@@ -107,18 +122,29 @@ int main(int argc,      // Number of strings in array argv
 		<< "\n\ndeflection if 0\t" << deflect.If0 
 		<< "\ndeflection if 1\t " << deflect.If1 << "\n\ncommencing...\n";
 
-	ARL_params retval;
-	retval = MonteCarlo(h, p1, deflect,it,headstart);
-	std::cout << std::string(40,'-') << "\nthreshold exceeded: " << retval.Runs << " times\n";
-	std::cout << "last exceeded at iteration number: " << retval.LastThreshold << '\n';
-	if (retval.Runs > 0) {
-		double arl = (double)retval.LastThreshold / retval.Runs;
-		std::cout << "~failures to signal (arl*p1): " << arl*p1 
-			<< "\n\nARL:" << arl << "\n";
-	}
+	do
+	{
+		ARL_params retval = MonteCarlo(h, p1, deflect,it,headstart);
+		std::cout << std::string(40,'-') << "\nthreshold exceeded: " << retval.Runs 
+			<< " times\nlast exceeded at iteration number: " << retval.LastThreshold 
+			<< "\nminimum run length: " << retval.MinRun
+			<< "\nmaximum run length: " << retval.MaxRun;
+		if (retval.Runs > 0) {
+			double arl = (double)retval.LastThreshold / retval.Runs;
+			std::cout << "\n~failures to signal (arl*p1): " << arl*p1
+				<< "\n\nARL:" << arl << "\n";
+		}
+		std::cout << "\nSimulation took: " << retval.Seconds << " Seconds" << std::endl;
+
+		if (full > 0) {
+			p1 = p0;
+			std::cout << "\np1 = p0 = " << p0 << "\n";
+		}
+		
+	} while (--full >= 0);
 	
 
-	std::cout << "\nSimulation took: " << retval.Seconds << " Seconds" << std::endl;
+	
 #ifdef _DEBUG
 	std::cout << "\n\nPress any key to close.";
 	std::cin.get();
@@ -129,10 +155,16 @@ int main(int argc,      // Number of strings in array argv
 namespace CusumARL
 {
 
-	inline W Deflections(double h, double p0, double &p1, double oddsRatio, ProbabilityRatioFormula formula)
+	inline W Deflections(double h, double &p0, double &p1, double oddsRatio, ProbabilityRatioFormula formula)
 	{
-		if (p1 == 0) {
+		if (p1 == 0.0 && p0 == 0.0) {
+			throw(invalid_argument("p0 and p1 cannot both be 0"));
+		}
+		if (p1 == 0.0) {
 			p1 = oddsRatio*p0 / (oddsRatio*p0 + 1 - p0);
+		}
+		else if (p0 == 0.0) {
+			p0 = p1 / (oddsRatio + p1 - oddsRatio*p1);
 		}
 
 		W returnVal = W();
@@ -158,14 +190,23 @@ namespace CusumARL
 		double resetTo = headstart*h;
 		double ti = resetTo; 
 
+		long runLength;
+
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
-		for (long i = 0; i < iterations; i++) {
+		for (long i = 1; i <= iterations; i++) {
 			ti += (rand() < cutpt ? w.If1:w.If0);
 			if (ti < 0) {
 				ti = 0;
 			}
 			else if (ti >= h) {
 				++returnVal.Runs;
+				runLength = i - returnVal.LastThreshold;
+				if (runLength > returnVal.MaxRun) {
+					returnVal.MaxRun = runLength;
+				}
+				else if (runLength < returnVal.MinRun) {
+					returnVal.MinRun = runLength;
+				}
 				returnVal.LastThreshold = i;
 				ti = resetTo;
 			}
@@ -173,7 +214,7 @@ namespace CusumARL
 		high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
 		returnVal.Seconds = duration_cast<duration<double>>(t2 - t1).count();
-
+		if (returnVal.MinRun == LONG_MAX) { returnVal.MinRun = 0; }
 		return returnVal;
 	}
 
