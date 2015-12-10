@@ -36,9 +36,9 @@ Optional:
    -h,  --help Displays usage information and exits.
 
 Calculation:
-	the log likelihood score for a given iteration is calculated as:
-		log(1.0 	  / (oddsRatio*p0 + 1 - p0)) if outcome=0
-		log(oddsRatio / (oddsRatio*p0 + 1 - p0)) if outcome=1
+   the log likelihood score for a given iteration is calculated as:
+	log(1.0       / (oddsRatio*p0 + 1 - p0)) if outcome=0
+	log(oddsRatio / (oddsRatio*p0 + 1 - p0)) if outcome=1
 
 Examples:
 
